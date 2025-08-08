@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan QR Code</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        h2 {
+            text-align: center;
+            color: #3498db;
+            margin-bottom: 30px;
+        }
+        #reader {
+            margin: 0 auto 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #showDataBtn {
+            display: none;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 20px auto;
+            display: block;
+            transition: background 0.3s ease;
+        }
+        #showDataBtn:hover {
+            background: #27ae60;
+        }
+        .result-card {
+            background: #404040;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .result-card h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #555;
+        }
+        .data-row:last-child {
+            border-bottom: none;
+        }
+        .data-label {
+            font-weight: bold;
+            color: #b3b3b3;
+        }
+        .data-value {
+            color: #ffffff;
+        }
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .loading {
+            text-align: center;
+            color: #3498db;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>QR Code Scanner</h2>
+        <div id="reader" style="width: 100%; max-width: 400px;"></div>
+
+        <!-- Button to fetch data after scan -->
+        <button id="showDataBtn" style="display:none;">Show QR Data</button>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading" style="display:none;">Loading QR data...</div>
+
+        <!-- Where the result will appear -->
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let scannedQRValue = null; // store scanned QR value temporarily
+
+        function onScanSuccess(qrMessage) {
+            scannedQRValue = qrMessage; // save scanned value
+            document.getElementById("showDataBtn").style.display = "block"; // show button
+        }
+
+        document.getElementById("showDataBtn").addEventListener("click", function() {
+            if (!scannedQRValue) return;
+
+            // Show loading
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("result").innerHTML = "";
+
+            fetch("/get_qr_data", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ qr_value: scannedQRValue })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("loading").style.display = "none";
+                
+                if (data.status === "success") {
+                    const registrationData = data.data;
+                    document.getElementById("result").innerHTML = `
+                        <div class="result-card">
+                            <h3>Registration Details</h3>
+                            <div class="data-row">
+                                <span class="data-label">ID:</span>
+                                <span class="data-value">${registrationData.id}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Name:</span>
+                                <span class="data-value">${registrationData.name || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Email:</span>
+                                <span class="data-value">${registrationData.email || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Phone:</span>
+                                <span class="data-value">${registrationData.phone || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Date of Birth:</span>
+                                <span class="data-value">${registrationData.dob || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Address:</span>
+                                <span class="data-value">${registrationData.address || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Event:</span>
+                                <span class="data-value">${registrationData.event || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Ticket Type:</span>
+                                <span class="data-value">${registrationData.ticketType || 'N/A'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Price:</span>
+                                <span class="data-value">₹${registrationData.price || '0'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Dietary Requirements:</span>
+                                <span class="data-value">${registrationData.dietary || 'None'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Special Requirements:</span>
+                                <span class="data-value">${registrationData.specialRequirements || 'None'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Registration Date:</span>
+                                <span class="data-value">${registrationData.created_at || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById("result").innerHTML = `
+                        <div class="error-message">
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById("loading").style.display = "none";
+                console.error('Error:', error);
+                document.getElementById("result").innerHTML = `
+                    <div class="error-message">
+                        Error fetching QR data. Please try again.
+                    </div>
+                `;
+            });
+        });
+
+        function onScanError(errorMessage) {
+            console.warn(errorMessage);
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess, onScanError);
+    </script>
+</body>
+</html>
